@@ -7,4 +7,14 @@ public class Lexer {
         this.position=0;
         this.currentSymbol = allCommand.charAt(0);
     }
+
+    public void Movement(){
+        this.position++;
+        if(this.position>=this.allCommand.length()){
+            this.currentSymbol = '\0';
+        }
+        else{
+            this.currentSymbol=allCommand.charAt(position);
+        }
+    }
 }
