@@ -17,4 +17,10 @@ public class Lexer {
             this.currentSymbol=allCommand.charAt(position);
         }
     }
+
+    public void skipSpace(){
+        while (currentSymbol!='\0' && Character.isWhitespace(currentSymbol)){;
+            Movement();
+        }
+    }
 }
