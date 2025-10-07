@@ -7,8 +7,8 @@ public class Console {
                 "Enter “HELP” if you want to see a list of commands that can be entered, “EXIT” if you want to exit the program:");
         while (true) {
             System.out.print("Please enter the command: ");
-            String ask = scanner.nextLine();
-            if (ask.equals("HELP")) {
+            String ask = scanner.nextLine().trim();
+            if (ask.equalsIgnoreCase("HELP")) {
                 System.out.println(
                         "Available commands:\n\n" +
 
@@ -43,15 +43,24 @@ public class Console {
                                 "       AVG(column)   - average value of column\n"
                 );
             }
-            if (ask.equals("EXIT")) {
+            if (ask.equalsIgnoreCase("EXIT")) {
                 break;
             } else if (!ask.isEmpty()) {
                 System.out.println("Unknown command. Type HELP to see available commands.");
+            }
+            else {
+                String command = ask;
+                while(!command.contains(";")){
+                    String ask1 = scanner.nextLine().trim();
+                    command=command+ask1;
+                }
+                command= command.replaceAll(";","");
             }
 
 
         }
     }
 }
+
 
 
