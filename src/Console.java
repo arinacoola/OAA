@@ -7,8 +7,21 @@ public class Console {
                 "Enter “HELP” if you want to see a list of commands that can be entered, “EXIT” if you want to exit the program:");
         while (true) {
             System.out.print("Please enter the command: ");
-            String ask = scanner.nextLine().trim();
-            if (ask.equalsIgnoreCase("HELP")) {
+            StringBuilder commandBuilder = new StringBuilder();
+            while (true) {
+                String line = scanner.nextLine().trim();
+                commandBuilder.append(line).append(" ");
+                if (line.contains(";")) {
+                    break;
+                }
+            }
+            String ask = commandBuilder.toString().trim();
+            int semicolonInd = ask.indexOf(';');
+            if (semicolonInd != -1) {
+                ask = ask.substring(0, semicolonInd + 1).trim();
+            }
+
+            if (ask.equalsIgnoreCase("HELP;")) {
                 System.out.println(
                         "Available commands:\n\n" +
 
@@ -41,21 +54,12 @@ public class Console {
                                 "       COUNT(column) - number of values in the group\n" +
                                 "       MAX(column)   - maximum value of column\n" +
                                 "       AVG(column)   - average value of column\n"
-                );
+                );continue;
             }
-            if (ask.equalsIgnoreCase("EXIT")) {
+            if (ask.equalsIgnoreCase("EXIT;")) {
                 break;
-            } else if (!ask.isEmpty()) {
-                System.out.println("Unknown command. Type HELP to see available commands.");
             }
-            else {
-                String command = ask;
-                while(!command.contains(";")){
-                    String ask1 = scanner.nextLine().trim();
-                    command=command+ask1;
-                }
-                command= command.replaceAll(";","");
-            }
+            System.out.println("Your command:  " + ask);
 
 
         }
