@@ -58,11 +58,27 @@ public class Lexer {
             }
             return new Token(TokenType.NUMBER, number.toString());
         }
-        if (currentSymbol == '(') { Movement(); return new Token(TokenType.LPAREN, "(");}
-        if (currentSymbol == ')') { Movement(); return new Token(TokenType.RPAREN, ")");}
-        if (currentSymbol == ',') { Movement(); return new Token(TokenType.COMMA, ",");}
-        if (currentSymbol == ';') { Movement(); return new Token(TokenType.SEMICOLON, ";");}
-        if (currentSymbol == '=') { Movement(); return new Token(TokenType.EQUALS, "=");}
+        if (currentSymbol == '(') {
+            Movement();
+            return new Token(TokenType.LPAREN, "(");
+        }
+        if (currentSymbol == ')') {
+            Movement();
+            return new Token(TokenType.RPAREN, ")");
+        }
+        if (currentSymbol == ',') {
+            Movement();
+            return new Token(TokenType.COMMA, ",");
+        }
+        if (currentSymbol == ';') {
+            Movement();
+            return new Token(TokenType.SEMICOLON, ";");
+        }
+        if (currentSymbol == '=') {
+            Movement();
+            return new Token(TokenType.EQUALS, "=");
+        }
+
         char unknown = currentSymbol;
         Movement();
         return new Token(TokenType.UNKNOWN, Character.toString(unknown));
