@@ -39,6 +39,17 @@ public class Table {
             }
         }
 
+        String line = "";
+        for(int clmn=0;clmn<columns.size();clmn++){
+            line=line + "+";
+            for(int i=0;i<width[clmn]+1;i++){
+                line=line+"-";
+            }
+            line=line+"-";
+        }
+        line=line+"+";
+        System.out.println(line);
+
     }
 
 
