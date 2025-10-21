@@ -3,6 +3,7 @@ import java.util.ArrayList;
 public class Parser {
     Lexer lexer;
     Token currentToken;
+    ArrayList<Table> tables = new ArrayList<>();
 
     public Parser(Lexer lexer,Token currentToken){
         this.lexer=lexer;
@@ -21,20 +22,31 @@ public class Parser {
                 parserCreate();
             }
             else if(currentToken.getValue().equalsIgnoreCase("INSERT")){
-                parserCreate();
+                parserInsert();
             }
             else if (currentToken.getValue().equalsIgnoreCase("SELECT")) {
                 System.out.println("Unknown keyword");
             }
         }
     }
+
+
     public void parserCreate(){
         getToken();
+
         if(currentToken.getType()!=TokenType.IDENTIFIER){
             System.out.println("Incorrect table name");
             return;
         }
         String tableName = currentToken.getValue();
+
+        for (Table t : tables) {
+            if (t.getName().equalsIgnoreCase(tableName)) {
+                System.out.println("Table '" + tableName + "' already exists.");
+                return;
+            }
+        }
+
         getToken();
         if(!currentToken.getValue().equals("(")){
             System.out.println("Expected '(' after table name");
@@ -83,7 +95,11 @@ public class Parser {
             System.out.println("Expected ';' at the end of CREATE command");
         }
 
-        new Table(tableName, columns, indexedValues);
+        Table newTable = new Table(tableName, columns, indexedValues);
+        tables.add(newTable);
+    }
+
+    public void parserInsert() {
     }
 
 
