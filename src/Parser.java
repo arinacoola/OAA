@@ -5,36 +5,34 @@ public class Parser {
     Token currentToken;
     ArrayList<Table> tables = new ArrayList<>();
 
-    public Parser(Lexer lexer,Token currentToken){
-        this.lexer=lexer;
-        this.currentToken=currentToken;
+    public Parser(Lexer lexer, Token currentToken) {
+        this.lexer = lexer;
+        this.currentToken = currentToken;
     }
 
-    public void  getToken(){
-        currentToken=lexer.newToken();
+    public void getToken() {
+        currentToken = lexer.newToken();
     }
-    public void recognizeCmnd(Token currentToken){
-        if(currentToken.getType()!=TokenType.KEYWORD){
+
+    public void recognizeCmnd(Token currentToken) {
+        if (currentToken.getType() != TokenType.KEYWORD) {
             return;
-        }
-        else {
-            if(currentToken.getValue().equalsIgnoreCase("CREATE")){
+        } else {
+            if (currentToken.getValue().equalsIgnoreCase("CREATE")) {
                 parserCreate();
-            }
-            else if(currentToken.getValue().equalsIgnoreCase("INSERT")){
+            } else if (currentToken.getValue().equalsIgnoreCase("INSERT")) {
                 parserInsert();
-            }
-            else if (currentToken.getValue().equalsIgnoreCase("SELECT")) {
+            } else if (currentToken.getValue().equalsIgnoreCase("SELECT")) {
                 System.out.println("Unknown keyword");
             }
         }
     }
 
 
-    public void parserCreate(){
+    public void parserCreate() {
         getToken();
 
-        if(currentToken.getType()!=TokenType.IDENTIFIER){
+        if (currentToken.getType() != TokenType.IDENTIFIER) {
             System.out.println("Incorrect table name");
             return;
         }
@@ -48,50 +46,48 @@ public class Parser {
         }
 
         getToken();
-        if(!currentToken.getValue().equals("(")){
+        if (!currentToken.getValue().equals("(")) {
             System.out.println("Expected '(' after table name");
             return;
         }
         getToken();
 
         ArrayList<String> columns = new ArrayList<>();
-        ArrayList<Boolean> indexedValues =new ArrayList<Boolean>();
+        ArrayList<Boolean> indexedValues = new ArrayList<Boolean>();
 
-        while (!currentToken.getValue().equals(")")){
-            if (currentToken.getType()!=TokenType.IDENTIFIER){
+        while (!currentToken.getValue().equals(")")) {
+            if (currentToken.getType() != TokenType.IDENTIFIER) {
                 System.out.println("Column name expected");
                 return;
             }
-            String columnName= currentToken.getValue();
+            String columnName = currentToken.getValue();
             getToken();
             boolean indexed;
-            if(currentToken.getValue().equalsIgnoreCase("INDEXED")){
-               indexed = true;
+            if (currentToken.getValue().equalsIgnoreCase("INDEXED")) {
+                indexed = true;
                 getToken();
-            }
-            else{
-                indexed=false;
+            } else {
+                indexed = false;
             }
             columns.add(columnName);
             indexedValues.add(indexed);
 
-            if (currentToken.getValue().equals(",")){
+            if (currentToken.getValue().equals(",")) {
                 getToken();
                 continue;
             }
             if (currentToken.getValue().equals(")")) {
                 break;
             }
-            if(!currentToken.getValue().equals(",")&&!currentToken.getValue().equals(")")){
+            if (!currentToken.getValue().equals(",") && !currentToken.getValue().equals(")")) {
                 System.out.println("Expected ',' or ')' after column definition");
             }
             getToken();
         }
         getToken();
-        if(currentToken.getValue().equals(";")){
+        if (currentToken.getValue().equals(";")) {
             System.out.println("Table " + tableName + " has been created");
-        }
-        else {
+        } else {
             System.out.println("Expected ';' at the end of CREATE command");
         }
 
@@ -106,7 +102,7 @@ public class Parser {
             getToken();
         }
 
-        if(currentToken.getType()!=TokenType.IDENTIFIER){
+        if (currentToken.getType() != TokenType.IDENTIFIER) {
             System.out.println("Incorrect table name");
             return;
         }
@@ -126,7 +122,7 @@ public class Parser {
 
         getToken();
 
-        if(!currentToken.getValue().equals("(")){
+        if (!currentToken.getValue().equals("(")) {
             System.out.println("Expected '(' after table name");
             return;
         }
@@ -144,14 +140,14 @@ public class Parser {
             numbers.add(num);
             getToken();
 
-            if (currentToken.getValue().equals(",")){
+            if (currentToken.getValue().equals(",")) {
                 getToken();
                 continue;
             }
             if (currentToken.getValue().equals(")")) {
                 break;
             }
-            if(!currentToken.getValue().equals(",")&&!currentToken.getValue().equals(")")){
+            if (!currentToken.getValue().equals(",") && !currentToken.getValue().equals(")")) {
                 System.out.println("Expected ',' or ')' after numeric value");
                 return;
 
@@ -173,11 +169,134 @@ public class Parser {
 
 
         foundTable.addRow(numbers);
-        System.out.println("1 row has been inserted into " + tableName );
+        System.out.println("1 row has been inserted into " + tableName);
 
 
     }
 
+    public void parserSelect() {
+        getToken();
+
+        if (!currentToken.getValue().equalsIgnoreCase("FROM")) {
+            System.out.println("Expected FROM after SELECT");
+            return;
+        }
+        getToken();
+
+        if (currentToken.getType() != TokenType.IDENTIFIER) {
+            System.out.println("Expected table name after FROM");
+            return;
+        }
+        String tableName = currentToken.getValue();
+
+        Table foundTable = null;
+        for (Table t : tables) {
+            if (t.getName().equalsIgnoreCase(tableName)) {
+                foundTable = t;
+                break;
+            }
+        }
+        if (foundTable == null) {
+            System.out.println("Table '" + tableName + "' does not exist.");
+            return;
+        }
+
+        getToken();
+
+
+        if (currentToken.getValue().equalsIgnoreCase("WHERE")) {
+            getToken();
+            if (currentToken.getType() != TokenType.IDENTIFIER) {
+                System.out.println("Expected column name after WHERE");
+                return;
+            }
+            String leftColumn = currentToken.getValue();
+            getToken();
+            if (!currentToken.getValue().equals("=")) {
+                System.out.println("Expected '=' in WHERE condition");
+                return;
+            }
+            getToken();
+
+
+            Double rightNum = null;
+            String rightColumn = null;
+            boolean compareColumn = false;
+            if (currentToken.getType() == TokenType.NUMBER) {
+                rightNum = Double.parseDouble(currentToken.getValue());
+            }
+            if (currentToken.getType() == TokenType.IDENTIFIER) {
+                compareColumn = true;
+                rightColumn = currentToken.getValue();
+            }
+
+            ArrayList<ArrayList<Double>> filteredRows = applyWhere(foundTable, leftColumn, compareColumn, rightColumn, rightNum);
+
+            Table result = new Table(foundTable.getName(), foundTable.getColumns(), foundTable.getIndexed());
+            result.rows = filteredRows;
+            result.printTable();
+
+            getToken();
+
+            if (!currentToken.getValue().equals(";")) {
+                System.out.println("Expected ';' at the end of SELECT command");
+                return;
+
+
+            }
+
+        }
+        else {
+            foundTable.printTable();
+        }
+
+    }
+
+    public ArrayList<ArrayList<Double>> applyWhere(Table foundTable,String leftColumn,boolean compareColumn,String rightColumn,Double rightNum){
+        ArrayList<ArrayList<Double>> filteredRows=new ArrayList<>();
+        int leftIndx=-1;
+        int rightIndx=-1;
+        foundTable.getColumns();
+        for( int i=0;i<foundTable.getColumns().size();i++){
+            if(foundTable.getColumns().get(i).equals(leftColumn)){
+                leftIndx=i;
+            }
+            if(compareColumn == true){
+                if(foundTable.getColumns().get(i).equals(rightColumn)){
+                    rightIndx=i;
+                }
+            }
+        }
+        if(leftIndx==-1){
+            System.out.println("Column '" + leftColumn + "' does not exist in table");
+            return new ArrayList<>();
+        }
+        if(rightIndx==-1){
+            System.out.println("Column '" + rightColumn + "' does not exist in table");
+            return new ArrayList<>();
+
+        }
+
+        foundTable.getRows();
+        for(int row=0;row<foundTable.getRows().size();row++){
+            Double leftValue=foundTable.getRows().get(row).get(leftIndx);
+            if(compareColumn == true){
+                Double rightValue=foundTable.getRows().get(row).get(rightIndx);
+                if (leftValue.equals(rightValue)) {
+                    filteredRows.add(foundTable.getRows().get(row));
+                }
+            }
+            if(compareColumn==false){
+                if(leftValue.equals(rightNum)){
+                    filteredRows.add(foundTable.getRows().get(row));
+                }
+            }
+
+        }
+
+        return filteredRows;
+
+    }
 
 
 }
