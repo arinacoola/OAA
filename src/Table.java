@@ -50,6 +50,14 @@ public class Table {
         line=line+"+";
         System.out.println(line);
 
+        String header = "|";
+        for(int clmn=0;clmn<columns.size();clmn++){
+            String text = columns.get(clmn);
+            int numSpaces=width[clmn] - text.length();
+            header = header + " " + text + " ".repeat(numSpaces) + " |";
+        }
+        System.out.println(header);
+
     }
 
 
