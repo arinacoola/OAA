@@ -100,6 +100,82 @@ public class Parser {
     }
 
     public void parserInsert() {
+        getToken();
+
+        if (currentToken.getValue().equalsIgnoreCase("INTO")) {
+            getToken();
+        }
+
+        if(currentToken.getType()!=TokenType.IDENTIFIER){
+            System.out.println("Incorrect table name");
+            return;
+        }
+        String tableName = currentToken.getValue();
+
+        Table foundTable = null;
+        for (Table t : tables) {
+            if (t.getName().equalsIgnoreCase(tableName)) {
+                foundTable = t;
+                break;
+            }
+        }
+        if (foundTable == null) {
+            System.out.println("Table '" + tableName + "' does not exist.");
+            return;
+        }
+
+        getToken();
+
+        if(!currentToken.getValue().equals("(")){
+            System.out.println("Expected '(' after table name");
+            return;
+        }
+
+        getToken();
+
+        ArrayList<Double> numbers = new ArrayList<>();
+
+        while (!currentToken.getValue().equals(")")) {
+            if (currentToken.getType() != TokenType.NUMBER) {
+                System.out.println("Expected number after INSERT");
+                return;
+            }
+            double num = Double.parseDouble(currentToken.getValue());
+            numbers.add(num);
+            getToken();
+
+            if (currentToken.getValue().equals(",")){
+                getToken();
+                continue;
+            }
+            if (currentToken.getValue().equals(")")) {
+                break;
+            }
+            if(!currentToken.getValue().equals(",")&&!currentToken.getValue().equals(")")){
+                System.out.println("Expected ',' or ')' after numeric value");
+                return;
+
+            }
+            getToken();
+
+        }
+
+        if (numbers.size() != foundTable.getColumns().size()) {
+            System.out.println("Number of values doesn't match number of columns in table");
+            return;
+        }
+
+        getToken();
+        if (!currentToken.getValue().equals(";")) {
+            System.out.println("Expected ';' at the end of INSERT command");
+            return;
+        }
+
+
+        foundTable.addRow(numbers);
+        System.out.println("1 row has been inserted into " + tableName );
+
+
     }
 
 
