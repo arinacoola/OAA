@@ -246,6 +246,32 @@ public class Parser {
             }
 
         }
+        //груп бай
+        if (currentToken.getValue().equalsIgnoreCase("GROUP")) {
+            getToken();
+            if (!currentToken.getValue().equalsIgnoreCase("BY")) {
+                System.out.println("Expected 'BY' after GROUP");
+                return;
+            }
+            getToken();
+            ArrayList<String> groupColumns = new ArrayList<>();
+            while (true) {
+                if (currentToken.getType() != TokenType.IDENTIFIER) {
+                    System.out.println("Expected column name in GROUP BY");
+                    return;
+                }
+
+                groupColumns.add(currentToken.getValue());
+                getToken();
+
+                if (currentToken.getValue().equals(",")) {
+                    getToken();
+                    continue;
+                }
+                break;
+            }
+            applyGroupBy(foundTable, groupColumns);
+        }
         else {
             foundTable.printTable();
         }
@@ -297,6 +323,50 @@ public class Parser {
         return filteredRows;
 
     }
+
+    public Table applyGroupBy(Table foundTable, ArrayList<String> groupColumns) {
+        Table result = new Table("Grouped_" + foundTable.getName(), foundTable.getColumns(), foundTable.getIndexed());
+        ArrayList<ArrayList<Double>> groupedRows = new ArrayList<>();
+        ArrayList<Integer> groupIndx = new ArrayList<>();
+
+        for (int i = 0; i < foundTable.getColumns().size(); i++) {
+            if (groupColumns.contains(foundTable.getColumns().get(i))) {
+                groupIndx.add(i);
+            }
+        }
+
+        for (int row = 0; row < foundTable.getRows().size(); row++) {
+            ArrayList<Double> currentRow = foundTable.getRows().get(row);
+            ArrayList<Double> groupKey = new ArrayList<>();
+            for (int idx : groupIndx) {
+                groupKey.add(currentRow.get(idx));
+            }
+            boolean exists = false;
+            for (ArrayList<Double> existingRow : groupedRows) {
+                boolean same = true;
+                for (int idx : groupIndx) {
+                    if (!existingRow.get(idx).equals(currentRow.get(idx))) {
+                        same = false;
+                        break;
+                    }
+                }
+                if (same) {
+                    exists = true;
+                    break;
+                }
+
+            }
+
+            if (!exists) groupedRows.add(new ArrayList<>(currentRow));
+        }
+
+        result.rows = groupedRows;
+
+
+        return result;
+    }
+
+
 
 
 }
