@@ -22,8 +22,8 @@ public class Parser {
                 parserCreate();
             } else if (currentToken.getValue().equalsIgnoreCase("INSERT")) {
                 parserInsert();
-            } else if (currentToken.getValue().equalsIgnoreCase("SELECT")) {
-                System.out.println("Unknown keyword");
+            }else if (currentToken.getValue().equalsIgnoreCase("SELECT")) {
+            parserSelect();
             }
         }
     }
@@ -62,12 +62,11 @@ public class Parser {
             }
             String columnName = currentToken.getValue();
             getToken();
-            boolean indexed;
+
+            boolean indexed=false;
             if (currentToken.getValue().equalsIgnoreCase("INDEXED")) {
                 indexed = true;
                 getToken();
-            } else {
-                indexed = false;
             }
             columns.add(columnName);
             indexedValues.add(indexed);
@@ -84,15 +83,16 @@ public class Parser {
             }
             getToken();
         }
+
         getToken();
-        if (currentToken.getValue().equals(";")) {
-            System.out.println("Table " + tableName + " has been created");
-        } else {
+        if (!currentToken.getValue().equals(";")) {
             System.out.println("Expected ';' at the end of CREATE command");
+            return;
         }
 
         Table newTable = new Table(tableName, columns, indexedValues);
         tables.add(newTable);
+        System.out.println("Table " + tableName + " has been created");
     }
 
     public void parserInsert() {
@@ -238,15 +238,8 @@ public class Parser {
 
             getToken();
 
-            if (!currentToken.getValue().equals(";")) {
-                System.out.println("Expected ';' at the end of SELECT command");
-                return;
-
-
-            }
-
         }
-        //груп бай
+
         if (currentToken.getValue().equalsIgnoreCase("GROUP")) {
             getToken();
             if (!currentToken.getValue().equalsIgnoreCase("BY")) {
@@ -268,21 +261,25 @@ public class Parser {
                     getToken();
                     continue;
                 }
-                break;
+                else {
+                    break;
+                }
             }
-            applyGroupBy(foundTable, groupColumns);
+            Table grouped = applyGroupBy(foundTable, groupColumns);
+            foundTable = grouped;
         }
-        else {
+        if (!currentToken.getValue().equals(";")) {
+            System.out.println("Expected ';' at the end of SELECT command");
+            return;
+        }
             foundTable.printTable();
-        }
-
     }
 
     public ArrayList<ArrayList<Double>> applyWhere(Table foundTable,String leftColumn,boolean compareColumn,String rightColumn,Double rightNum){
         ArrayList<ArrayList<Double>> filteredRows=new ArrayList<>();
         int leftIndx=-1;
         int rightIndx=-1;
-        foundTable.getColumns();
+
         for( int i=0;i<foundTable.getColumns().size();i++){
             if(foundTable.getColumns().get(i).equals(leftColumn)){
                 leftIndx=i;
@@ -297,13 +294,13 @@ public class Parser {
             System.out.println("Column '" + leftColumn + "' does not exist in table");
             return new ArrayList<>();
         }
-        if(rightIndx==-1){
+        if (compareColumn && rightIndx == -1) {
             System.out.println("Column '" + rightColumn + "' does not exist in table");
             return new ArrayList<>();
-
         }
 
-        foundTable.getRows();
+
+
         for(int row=0;row<foundTable.getRows().size();row++){
             Double leftValue=foundTable.getRows().get(row).get(leftIndx);
             if(compareColumn == true){
