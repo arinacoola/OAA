@@ -23,15 +23,23 @@ public class Table {
     }
 
     public void printTable() {
+        if (columns == null || columns.isEmpty()) {
+            System.out.println("Table has no columns defined");
+            return;
+        }
+        if (rows == null) {
+            rows = new ArrayList<>();
+        }
+
         int[] width = new int[columns.size()];
 
         for (int clmn = 0; clmn < columns.size(); clmn++) {
             width[clmn] = columns.get(clmn).length();
-            for (int row = 0; row < rows.size(); row++) {
-                ArrayList<Double> currentRow = rows.get(row);
-                Double value = currentRow.get(clmn);
-                String text = String.valueOf(value);
-
+            for (ArrayList<Double> row : rows) {
+                if (clmn >= row.size()){
+                    continue;
+                }
+                String text = String.valueOf(row.get(clmn));
                 if (text.length() > width[clmn]) {
                     width[clmn] = text.length();
                 }
@@ -40,38 +48,35 @@ public class Table {
 
         printLine(width);
 
-        String header = "|";
+        StringBuilder header = new StringBuilder("|");
         for (int clmn = 0; clmn < columns.size(); clmn++) {
             String text = columns.get(clmn);
-            int numSpaces = width[clmn] - text.length();
-            header = header + " " + text + " ".repeat(numSpaces) + " |";
+            int numSpaces = Math.max(0, width[clmn] - text.length());
+            header.append(" ").append(text).append(" ".repeat(numSpaces)).append(" |");
         }
         System.out.println(header);
 
         printLine(width);
-
         if (rows.isEmpty()) {
-            System.out.println("No data");
+            System.out.println("| (no data) " + " ".repeat(Math.max(0, header.length() - 12)) + "|");
+            printLine(width);
+            return;
         }
-        else {
-            for (int row = 0; row < rows.size(); row++) {
-                ArrayList<Double> currentRow = rows.get(row);
-                String rowLine = "|";
-                for (int clmn = 0; clmn < columns.size(); clmn++) {
-                    Double value = currentRow.get(clmn);
-                    String text = String.format("%.2f", value);
-                    int leftSpaces = width[clmn] - text.length();
-                    rowLine = rowLine + " " + " ".repeat(leftSpaces) + text + " |";
 
-                }
-                System.out.println(rowLine);
+        for (ArrayList<Double> row : rows) {
+            StringBuilder rowLine = new StringBuilder("|");
+            for (int clmn = 0; clmn < columns.size(); clmn++) {
+                Double value = row.get(clmn);
+                String text = String.format("%.2f", value);
+                int leftSpaces = Math.max(0, width[clmn] - text.length());
+                rowLine.append(" ").append(" ".repeat(leftSpaces)).append(text).append(" |");
             }
+            System.out.println(rowLine);
         }
-
 
         printLine(width);
-
     }
+
 
     private void printLine ( int[] width){
         String line = "";
