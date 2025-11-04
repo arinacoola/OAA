@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Console {
@@ -5,6 +6,7 @@ public class Console {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Welcome to the relational model with support for data aggregation (numbers);\n" +
                 "Enter “HELP” if you want to see a list of commands that can be entered, “EXIT” if you want to exit the program:");
+        ArrayList<Table> tables = new ArrayList<>();
         while (true) {
             System.out.print("Please enter the command: ");
             StringBuilder commandBuilder = new StringBuilder();
@@ -19,6 +21,9 @@ public class Console {
             int semicolonInd = ask.indexOf(';');
             if (semicolonInd != -1) {
                 ask = ask.substring(0, semicolonInd + 1).trim();
+            }
+            if (ask.isBlank()) {
+                continue;
             }
 
             if (ask.equalsIgnoreCase("HELP;")) {
@@ -54,13 +59,17 @@ public class Console {
                                 "       COUNT(column) - number of values in the group\n" +
                                 "       MAX(column)   - maximum value of column\n" +
                                 "       AVG(column)   - average value of column\n"
-                );continue;
+                );
+                continue;
             }
             if (ask.equalsIgnoreCase("EXIT;")) {
                 break;
             }
             System.out.println("Your command:  " + ask);
-
+            Lexer lexer = new Lexer(ask);
+            Token token = lexer.newToken();
+            Parser parser = new Parser(lexer, token, tables);
+            parser.recognizeCmnd(token);
 
         }
     }

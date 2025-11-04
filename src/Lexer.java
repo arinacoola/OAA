@@ -6,7 +6,12 @@ public class Lexer {
     public Lexer(String allCommand) {
         this.allCommand = allCommand;
         this.position = 0;
-        this.currentSymbol = allCommand.charAt(0);
+        if (allCommand.isEmpty()) {
+            this.currentSymbol = '\0';
+        }
+        else {
+            this.currentSymbol = allCommand.charAt(0);
+        }
     }
 
     public void Movement() {
@@ -49,10 +54,11 @@ public class Lexer {
                 number.append('-');
                 Movement();
             }
-            if (!Character.isDigit(currentSymbol)) {
-                return new Token(TokenType.UNKNOWN, number.toString());
-            }
-            while (Character.isDigit(currentSymbol)) {
+            boolean hasDot = false;
+            while (Character.isDigit(currentSymbol) || (currentSymbol == '.' && !hasDot)) {
+                if (currentSymbol == '.') {
+                    hasDot = true;
+                }
                 number.append(currentSymbol);
                 Movement();
             }
@@ -84,7 +90,7 @@ public class Lexer {
         return new Token(TokenType.UNKNOWN, Character.toString(unknown));
     }
     private boolean isKeyword(String word1) {
-        String[] keyword = {"CREATE", "INSERT", "INTO", "SELECT", "FROM", "WHERE", "GROUP_BY", "COUNT", "MAX", "AVG", "INDEXED"};
+        String[] keyword = {"CREATE", "INSERT", "INTO", "SELECT", "FROM", "WHERE", "GROUP", "BY", "COUNT", "MAX", "AVG", "INDEXED"};
         for (String key : keyword) {
             if (key.equalsIgnoreCase(word1)) {
                 return true;

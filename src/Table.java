@@ -12,7 +12,6 @@ public class Table {
         this.columns = columns;
         this.indexed = indexed;
         this.rows = new ArrayList<>();
-        ;
     }
 
     public void addRow(List<Double> values) {
@@ -51,7 +50,6 @@ public class Table {
 
         printLine(width);
 
-        //рядки
         if (rows.isEmpty()) {
             System.out.println("No data");
         }
