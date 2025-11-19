@@ -5,6 +5,7 @@ public class Parser {
     Lexer lexer;
     Token currentToken;
     ArrayList<Table> tables;
+    private Table original;
 
     public Parser(Lexer lexer, Token currentToken, ArrayList<Table> tables) {
         this.lexer = lexer;
@@ -24,8 +25,8 @@ public class Parser {
                 parserCreate();
             } else if (currentToken.getValue().equalsIgnoreCase("INSERT")) {
                 parserInsert();
-            }else if (currentToken.getValue().equalsIgnoreCase("SELECT")) {
-            parserSelect();
+            } else if (currentToken.getValue().equalsIgnoreCase("SELECT")) {
+                parserSelect();
             }
         }
     }
@@ -41,7 +42,7 @@ public class Parser {
         String tableName = currentToken.getValue();
 
         for (Table t : tables) {
-            if (t.getName().equalsIgnoreCase(tableName)) {
+            if (t.getName().equals(tableName)) {
                 System.out.println("Table '" + tableName + "' already exists.");
                 return;
             }
@@ -65,7 +66,7 @@ public class Parser {
             String columnName = currentToken.getValue();
             getToken();
 
-            boolean indexed=false;
+            boolean indexed = false;
             if (currentToken.getValue().equalsIgnoreCase("INDEXED")) {
                 indexed = true;
                 getToken();
@@ -112,7 +113,7 @@ public class Parser {
 
         Table foundTable = null;
         for (Table t : tables) {
-            if (t.getName().equalsIgnoreCase(tableName)) {
+            if (t.getName().equals(tableName)) {
                 foundTable = t;
                 break;
             }
@@ -206,13 +207,12 @@ public class Parser {
                 if (currentToken.getValue().equals(",")) {
                     getToken();
                     continue;
-                }
-                else {
+                } else {
                     break;
                 }
             }
         }
-            if (!currentToken.getValue().equalsIgnoreCase("FROM")) {
+        if (!currentToken.getValue().equalsIgnoreCase("FROM")) {
             System.out.println("Expected FROM after SELECT");
             return;
         }
@@ -226,7 +226,7 @@ public class Parser {
 
         Table foundTable = null;
         for (Table t : tables) {
-            if (t.getName().equalsIgnoreCase(tableName)) {
+            if (t.getName().equals(tableName)) {
                 foundTable = t;
                 break;
             }
@@ -299,7 +299,9 @@ public class Parser {
                     break;
                 }
             }
+            Table savedOriginal = foundTable;
             Table grouped = applyGroupBy(foundTable, groupColumns);
+            grouped.original = savedOriginal;
             foundTable = grouped;
         }
         if (!currentToken.getValue().equals(";")) {
@@ -312,145 +314,161 @@ public class Parser {
             aggr.printTable();
             return;
         }
-            foundTable.printTable();
+        foundTable.printTable();
     }
 
-    public Table applyAggr(Table table, ArrayList<String> func, ArrayList<String> columns) {
-        ArrayList<String> newColumns = new ArrayList<>();
-        ArrayList<Boolean> ind = new ArrayList<>();
-        ArrayList<ArrayList<Double>> newRows = new ArrayList<>();
+    public Table applyAggr(Table table, ArrayList<String> funcs, ArrayList<String> cols) {
+        if (!table.getName().startsWith("Grouped_")) {
 
-        if (table.getName().startsWith("Grouped_")) {
-            newColumns.addAll(table.getColumns());
-            for (String f : func) {
-                for (String c : columns) {
-                    newColumns.add(f + "(" + c + ")");
-                }
-            }
+            ArrayList<String> newCols = new ArrayList<>();
+            ArrayList<Boolean> inds = new ArrayList<>();
+            ArrayList<Double> resultRow = new ArrayList<>();
 
-            ArrayList<Integer> groupInd = new ArrayList<>();
-            for (int i = 0; i < table.getColumns().size(); i++) {
-                groupInd.add(i);
-            }
+            for (int i = 0; i < funcs.size(); i++) {
+                String func = funcs.get(i);
+                String colName = cols.get(i);
 
-            for (ArrayList<Double> groupRow : table.getRows()) {
-                ArrayList<Double> newRow = new ArrayList<>(groupRow);
-                ArrayList<ArrayList<Double>> matching = new ArrayList<>();
-
-                for (ArrayList<Double> row : table.getRows()) {
-                    boolean same = true;
-                    for (int idx : groupInd) {
-                        if (!row.get(idx).equals(groupRow.get(idx))) {
-                            same = false;
-                            break;
-                        }
-                    }
-                    if (same) {
-                        matching.add(row);
-                    }
+                int colIdx = table.getColumns().indexOf(colName);
+                if (colIdx == -1) {
+                    System.out.println("Column '" + colName + "' not found");
+                    continue;
                 }
 
-                for (int i = 0; i < func.size(); i++) {
-                    String func1 = func.get(i);
-                    String colName = columns.get(i);
-                    int colInd = table.getColumns().indexOf(colName);
-                    ArrayList<Double> values = new ArrayList<>();
-                    for (ArrayList<Double> r : matching) {
-                        values.add(r.get(colInd));
-                    }
-                    if (values.isEmpty()) {
-                        newRow.add(0.0);
-                        continue;
-                    }
-
-                    double result = 0;
-                    if (func1.equals("COUNT")) {
-                        result = values.size();
-                    }
-                    if (func1.equals("MAX")) {
-                        result = Collections.max(values);
-                    }
-                    if (func1.equals("AVG")) {
-                        double sum = 0;
-                        for (double v : values) {
-                            sum += v;
-                        }
-                        if (values.size() > 0) {
-                            result = sum / values.size();
-                        }
-                        else {
-                            result = 0;
-                        }
-                    }
-                    newRow.add(result);
+                ArrayList<Double> values = new ArrayList<>();
+                for (ArrayList<Double> r : table.getRows()) {
+                    values.add(r.get(colIdx));
                 }
-                newRows.add(newRow);
+                double res = 0;
+                if (func.equals("COUNT")) {
+                    res = values.size();
+                }
+
+                if (func.equals("MAX")) {
+                    res = Collections.max(values);
+                }
+
+                if (func.equals("AVG")) {
+                    double sum = 0;
+                    for (double v : values){
+                        sum += v;
+                    }
+                    if (values.size() > 0) {
+                        res = sum / values.size();
+                    }
+                    else {
+                        res = 0;
+                    }
+                }
+
+                resultRow.add(res);
+                newCols.add(func + "(" + colName + ")");
+                inds.add(false);
             }
 
-            Table resultTable = new Table("GroupedAgg_" + table.getName(), newColumns, ind);
-            resultTable.rows = newRows;
-            return resultTable;
+            Table result = new Table("Aggregation", newCols, inds);
+            result.rows.add(resultRow);
+            return result;
         }
 
-        ArrayList<Double> resultRow = new ArrayList<>();
-        for (int i = 0; i < func.size(); i++) {
-            String func1 = func.get(i);
-            String colName = columns.get(i);
-            int colInd = table.getColumns().indexOf(colName);
-            if (colInd == -1) {
-                System.out.println("Column '" + colName + "' not found");
-                continue;
-            }
-            ArrayList<Double> val = new ArrayList<>();
-            for (ArrayList<Double> row : table.getRows()) {
-                val.add(row.get(colInd));
+        Table grouped = table;
+        if (grouped.original != null) {
+            original = grouped.original;
+        } else {
+            original = grouped;
+        }
+
+        ArrayList<String> groupCols = grouped.getColumns();
+        ArrayList<String> resultCols = new ArrayList<>(groupCols);
+        ArrayList<Boolean> resultInd = new ArrayList<>(grouped.getIndexed());
+        ArrayList<ArrayList<Double>> resultRows = new ArrayList<>();
+
+        for (int i = 0; i < funcs.size(); i++) {
+            resultCols.add(funcs.get(i) + "(" + cols.get(i) + ")");
+            resultInd.add(false);
+        }
+
+        for (ArrayList<Double> groupKey : grouped.getRows()) {
+            ArrayList<ArrayList<Double>> matching = new ArrayList<>();
+            for (ArrayList<Double> row : original.getRows()) {
+                boolean ok = true;
+                for (int k = 0; k < groupCols.size(); k++) {
+                    String gcol = groupCols.get(k);
+                    int origIdx = original.getColumns().indexOf(gcol);
+
+                    if (!row.get(origIdx).equals(groupKey.get(k))) {
+                        ok = false;
+                        break;
+                    }
+                }
+
+                if (ok) {
+                    matching.add(row);
+                }
             }
 
-            double result = 0;
-            if (func1.equals("COUNT")) {
-                result = val.size();
-            }
-            if (func1.equals("MAX")) {
-                result = Collections.max(val);
-            }
-            if (func1.equals("AVG")) {
-                double sum = 0;
-                for (int k = 0; k < val.size(); k++) {
-                    sum += val.get(k);
+            ArrayList<Double> newRow = new ArrayList<>(groupKey);
+
+            for (int i = 0; i < funcs.size(); i++) {
+                String func = funcs.get(i);
+                String colName = cols.get(i);
+
+                int colIdx = original.getColumns().indexOf(colName);
+                if (colIdx == -1) {
+                    System.out.println("Column '" + colName + "' not found.");
+                    newRow.add(0.0);
+                    continue;
                 }
-                if (val.size() > 0) {
-                    result = sum / val.size();
+
+                ArrayList<Double> values = new ArrayList<>();
+                for (ArrayList<Double> r : matching) values.add(r.get(colIdx));
+
+                double res = 0;
+                if (func.equals("COUNT")) {
+                    res = values.size();
                 }
-                else {
-                    result = 0;
+
+                if (func.equals("MAX")) {
+                    res = Collections.max(values);
                 }
+
+                if (func.equals("AVG")) {
+                    double sum = 0;
+                    for (double v : values){
+                        sum += v;
+                    }
+                    if (values.size() > 0){
+                        res = sum / values.size();
+                    }
+                    else {
+                        res = 0;
+                    }
+                }
+                newRow.add(res);
             }
-            resultRow.add(result);
-            newColumns.add(func1 + "(" + colName + ")");
+            resultRows.add(newRow);
         }
-        newRows.add(resultRow);
-        Table resultTable = new Table("Aggregation", newColumns, ind);
-        resultTable.rows = newRows;
-        return resultTable;
+        Table result = new Table("GroupedAgg_" + original.getName(), resultCols, resultInd);
+        result.rows = resultRows;
+        return result;
     }
 
 
-    public ArrayList<ArrayList<Double>> applyWhere(Table foundTable,String leftColumn,boolean compareColumn,String rightColumn,Double rightNum){
-        ArrayList<ArrayList<Double>> filteredRows=new ArrayList<>();
-        int leftIndx=-1;
-        int rightIndx=-1;
+    public ArrayList<ArrayList<Double>> applyWhere(Table foundTable, String leftColumn, boolean compareColumn, String rightColumn, Double rightNum) {
+        ArrayList<ArrayList<Double>> filteredRows = new ArrayList<>();
+        int leftIndx = -1;
+        int rightIndx = -1;
 
-        for( int i=0;i<foundTable.getColumns().size();i++){
-            if(foundTable.getColumns().get(i).equals(leftColumn)){
-                leftIndx=i;
+        for (int i = 0; i < foundTable.getColumns().size(); i++) {
+            if (foundTable.getColumns().get(i).equals(leftColumn)) {
+                leftIndx = i;
             }
-            if(compareColumn){
-                if(foundTable.getColumns().get(i).equals(rightColumn)){
-                    rightIndx=i;
+            if (compareColumn) {
+                if (foundTable.getColumns().get(i).equals(rightColumn)) {
+                    rightIndx = i;
                 }
             }
         }
-        if(leftIndx==-1){
+        if (leftIndx == -1) {
             System.out.println("Column '" + leftColumn + "' does not exist in table");
             return new ArrayList<>();
         }
@@ -460,17 +478,16 @@ public class Parser {
         }
 
 
-
-        for(int row=0;row<foundTable.getRows().size();row++){
-            Double leftValue=foundTable.getRows().get(row).get(leftIndx);
-            if(compareColumn){
-                Double rightValue=foundTable.getRows().get(row).get(rightIndx);
+        for (int row = 0; row < foundTable.getRows().size(); row++) {
+            Double leftValue = foundTable.getRows().get(row).get(leftIndx);
+            if (compareColumn) {
+                Double rightValue = foundTable.getRows().get(row).get(rightIndx);
                 if (leftValue.equals(rightValue)) {
                     filteredRows.add(foundTable.getRows().get(row));
                 }
             }
-            if(!compareColumn){
-                if(leftValue.equals(rightNum)){
+            if (!compareColumn) {
+                if (leftValue.equals(rightNum)) {
                     filteredRows.add(foundTable.getRows().get(row));
                 }
             }
@@ -482,37 +499,39 @@ public class Parser {
     }
 
     public Table applyGroupBy(Table foundTable, ArrayList<String> groupColumns) {
-        Table result = new Table("Grouped_" + foundTable.getName(), foundTable.getColumns(), foundTable.getIndexed());
-        ArrayList<ArrayList<Double>> groupedRows = new ArrayList<>();
-        ArrayList<Integer> groupIndx = new ArrayList<>();
-        for (int i = 0; i < foundTable.getColumns().size(); i++) {
-            if (groupColumns.contains(foundTable.getColumns().get(i))) {
-                groupIndx.add(i);
+        ArrayList<Integer> groupIdx = new ArrayList<>();
+        for (String col : groupColumns) {
+            int idx = foundTable.getColumns().indexOf(col);
+            if (idx == -1) {
+                System.out.println("Column '" + col + "' not found");
+                return foundTable;
             }
+            groupIdx.add(idx);
         }
-        for (ArrayList<Double> currentRow : foundTable.getRows()) {
-            ArrayList<Double> groupKey = new ArrayList<>();
-            for (int idx : groupIndx) {
-                groupKey.add(currentRow.get(idx));
-            }
+        ArrayList<String> newCols = new ArrayList<>(groupColumns);
+        ArrayList<Boolean> newInd = new ArrayList<>();
+        for (int idx : groupIdx) newInd.add(foundTable.getIndexed().get(idx));
+
+        Table result = new Table("Grouped_" + foundTable.getName(), newCols, newInd);
+
+        ArrayList<ArrayList<Double>> grouped = new ArrayList<>();
+
+        for (ArrayList<Double> row : foundTable.getRows()) {
+            ArrayList<Double> key = new ArrayList<>();
+            for (int idx : groupIdx) key.add(row.get(idx));
+
             boolean exists = false;
-            for (ArrayList<Double> existingRow : groupedRows) {
-                if (existingRow.equals(groupKey)) {
+            for (ArrayList<Double> g : grouped) {
+                if (g.equals(key)) {
                     exists = true;
                     break;
                 }
             }
-            if (!exists) {
-                groupedRows.add(groupKey);
+            if (!exists){
+                grouped.add(key);
             }
         }
-
-        result.rows = groupedRows;
+        result.rows = grouped;
         return result;
     }
-
-
-
-
-
 }

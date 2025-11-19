@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Table {
+    public Table original;
     String name;
     ArrayList<String> columns;
     ArrayList<Boolean> indexed;
