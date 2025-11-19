@@ -1,12 +1,13 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
 
 public class Table {
     public Table original;
     String name;
     ArrayList<String> columns;
     ArrayList<Boolean> indexed;
-    ArrayList<ArrayList<Double>> rows;
+    ArrayList<ArrayList<BigDecimal>> rows;
 
     public Table(String name, ArrayList<String> columns, ArrayList<Boolean> indexed) {
         this.name = name;
@@ -15,10 +16,11 @@ public class Table {
         this.rows = new ArrayList<>();
     }
 
-    public void addRow(List<Double> values) {
+    public void addRow(List<BigDecimal> values) {
         if (values.size() != columns.size()) {
             System.out.println("Number of values doesn't match number of columns");
-        } else {
+        }
+        else {
             rows.add(new ArrayList<>(values));
         }
     }
@@ -36,7 +38,7 @@ public class Table {
 
         for (int clmn = 0; clmn < columns.size(); clmn++) {
             width[clmn] = columns.get(clmn).length();
-            for (ArrayList<Double> row : rows) {
+            for (ArrayList<BigDecimal> row : rows) {
                 if (clmn >= row.size()){
                     continue;
                 }
@@ -64,11 +66,11 @@ public class Table {
             return;
         }
 
-        for (ArrayList<Double> row : rows) {
+        for (ArrayList<BigDecimal> row : rows) {
             StringBuilder rowLine = new StringBuilder("|");
             for (int clmn = 0; clmn < columns.size(); clmn++) {
-                Double value = row.get(clmn);
-                String text = String.format("%.2f", value);
+                BigDecimal value = row.get(clmn);
+                String text = value.stripTrailingZeros().toPlainString();
                 int leftSpaces = Math.max(0, width[clmn] - text.length());
                 rowLine.append(" ").append(" ".repeat(leftSpaces)).append(text).append(" |");
             }
@@ -105,7 +107,7 @@ public class Table {
         return indexed;
     }
 
-    public ArrayList<ArrayList<Double>> getRows () {
+    public ArrayList<ArrayList<BigDecimal>> getRows () {
         return rows;
     }
 }

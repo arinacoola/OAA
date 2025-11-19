@@ -53,17 +53,18 @@ public class Lexer {
             if (currentSymbol == '-') {
                 number.append('-');
                 Movement();
-            }
-            boolean hasDot = false;
-            while (Character.isDigit(currentSymbol) || (currentSymbol == '.' && !hasDot)) {
-                if (currentSymbol == '.') {
-                    hasDot = true;
+                if (!Character.isDigit(currentSymbol)) {
+                    return new Token(TokenType.UNKNOWN, number.toString());
                 }
+            }
+            while (Character.isDigit(currentSymbol)) {
                 number.append(currentSymbol);
                 Movement();
             }
+
             return new Token(TokenType.NUMBER, number.toString());
         }
+
         if (currentSymbol == '(') {
             Movement();
             return new Token(TokenType.LPAREN, "(");

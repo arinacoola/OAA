@@ -54,7 +54,7 @@ public class Console {
                                 "6. SELECT agg_function(column) [, ...]\n" +
                                 "       FROM table_name\n" +
                                 "       [WHERE condition]\n" +
-                                "       [GROUP_BY column_name [, ...]];\n" +
+                                "       [GROUP BY column_name [, ...]];\n" +
                                 "   Supported functions:\n" +
                                 "       COUNT(column) - number of values in the group\n" +
                                 "       MAX(column)   - maximum value of column\n" +

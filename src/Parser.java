@@ -1,5 +1,6 @@
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Collections;
 
 public class Parser {
     Lexer lexer;
@@ -132,14 +133,14 @@ public class Parser {
 
         getToken();
 
-        ArrayList<Double> numbers = new ArrayList<>();
+        ArrayList<BigDecimal> numbers = new ArrayList<>();
 
         while (!currentToken.getValue().equals(")")) {
             if (currentToken.getType() != TokenType.NUMBER) {
                 System.out.println("Expected number after INSERT");
                 return;
             }
-            double num = Double.parseDouble(currentToken.getValue());
+            BigDecimal num = new BigDecimal(currentToken.getValue());
             numbers.add(num);
             getToken();
 
@@ -254,18 +255,18 @@ public class Parser {
             getToken();
 
 
-            Double rightNum = null;
+            BigDecimal rightNum = null;
             String rightColumn = null;
             boolean compareColumn = false;
             if (currentToken.getType() == TokenType.NUMBER) {
-                rightNum = Double.parseDouble(currentToken.getValue());
+                rightNum =new BigDecimal(currentToken.getValue());
             }
             if (currentToken.getType() == TokenType.IDENTIFIER) {
                 compareColumn = true;
                 rightColumn = currentToken.getValue();
             }
 
-            ArrayList<ArrayList<Double>> filteredRows = applyWhere(foundTable, leftColumn, compareColumn, rightColumn, rightNum);
+            ArrayList<ArrayList<BigDecimal>> filteredRows = applyWhere(foundTable, leftColumn, compareColumn, rightColumn, rightNum);
 
             Table result = new Table(foundTable.getName(), foundTable.getColumns(), foundTable.getIndexed());
             result.rows = filteredRows;
@@ -318,143 +319,129 @@ public class Parser {
     }
 
     public Table applyAggr(Table table, ArrayList<String> funcs, ArrayList<String> cols) {
-        if (!table.getName().startsWith("Grouped_")) {
+        if (!table.getName().startsWith("Grouped ")) {
 
             ArrayList<String> newCols = new ArrayList<>();
-            ArrayList<Boolean> inds = new ArrayList<>();
-            ArrayList<Double> resultRow = new ArrayList<>();
+            ArrayList<Boolean> newInd = new ArrayList<>();
+            ArrayList<BigDecimal> resultRow = new ArrayList<>();
 
             for (int i = 0; i < funcs.size(); i++) {
+
                 String func = funcs.get(i);
                 String colName = cols.get(i);
 
                 int colIdx = table.getColumns().indexOf(colName);
                 if (colIdx == -1) {
                     System.out.println("Column '" + colName + "' not found");
+                    resultRow.add(BigDecimal.ZERO);
                     continue;
                 }
 
-                ArrayList<Double> values = new ArrayList<>();
-                for (ArrayList<Double> r : table.getRows()) {
+                ArrayList<BigDecimal> values = new ArrayList<>();
+                for (ArrayList<BigDecimal> r : table.getRows()) {
                     values.add(r.get(colIdx));
                 }
-                double res = 0;
-                if (func.equals("COUNT")) {
-                    res = values.size();
-                }
 
-                if (func.equals("MAX")) {
-                    res = Collections.max(values);
-                }
+                BigDecimal res = compute(func, values);
 
-                if (func.equals("AVG")) {
-                    double sum = 0;
-                    for (double v : values){
-                        sum += v;
-                    }
-                    if (values.size() > 0) {
-                        res = sum / values.size();
-                    }
-                    else {
-                        res = 0;
-                    }
-                }
-
-                resultRow.add(res);
                 newCols.add(func + "(" + colName + ")");
-                inds.add(false);
+                newInd.add(false);
+                resultRow.add(res);
             }
 
-            Table result = new Table("Aggregation", newCols, inds);
+            Table result = new Table("Aggregation", newCols, newInd);
             result.rows.add(resultRow);
             return result;
         }
-
         Table grouped = table;
-        if (grouped.original != null) {
-            original = grouped.original;
-        } else {
-            original = grouped;
-        }
+        original = (grouped.original != null ? grouped.original : grouped);
 
         ArrayList<String> groupCols = grouped.getColumns();
+
         ArrayList<String> resultCols = new ArrayList<>(groupCols);
         ArrayList<Boolean> resultInd = new ArrayList<>(grouped.getIndexed());
-        ArrayList<ArrayList<Double>> resultRows = new ArrayList<>();
-
         for (int i = 0; i < funcs.size(); i++) {
             resultCols.add(funcs.get(i) + "(" + cols.get(i) + ")");
             resultInd.add(false);
         }
 
-        for (ArrayList<Double> groupKey : grouped.getRows()) {
-            ArrayList<ArrayList<Double>> matching = new ArrayList<>();
-            for (ArrayList<Double> row : original.getRows()) {
+        ArrayList<ArrayList<BigDecimal>> resultRows = new ArrayList<>();
+
+        for (ArrayList<BigDecimal> groupKey : grouped.getRows()) {
+            ArrayList<ArrayList<BigDecimal>> matching = new ArrayList<>();
+            for (ArrayList<BigDecimal> row : original.getRows()) {
+
                 boolean ok = true;
+
                 for (int k = 0; k < groupCols.size(); k++) {
                     String gcol = groupCols.get(k);
-                    int origIdx = original.getColumns().indexOf(gcol);
+                    int colIdx = original.getColumns().indexOf(gcol);
 
-                    if (!row.get(origIdx).equals(groupKey.get(k))) {
+                    if (colIdx == -1 || row.get(colIdx).compareTo(groupKey.get(k)) != 0) {
                         ok = false;
                         break;
                     }
                 }
 
-                if (ok) {
+                if (ok){
                     matching.add(row);
                 }
             }
-
-            ArrayList<Double> newRow = new ArrayList<>(groupKey);
-
+            ArrayList<BigDecimal> newRow = new ArrayList<>(groupKey);
             for (int i = 0; i < funcs.size(); i++) {
+
                 String func = funcs.get(i);
                 String colName = cols.get(i);
 
                 int colIdx = original.getColumns().indexOf(colName);
+
                 if (colIdx == -1) {
-                    System.out.println("Column '" + colName + "' not found.");
-                    newRow.add(0.0);
+                    System.out.println("Column '" + colName + "' not found");
+                    newRow.add(BigDecimal.ZERO);
                     continue;
                 }
 
-                ArrayList<Double> values = new ArrayList<>();
-                for (ArrayList<Double> r : matching) values.add(r.get(colIdx));
-
-                double res = 0;
-                if (func.equals("COUNT")) {
-                    res = values.size();
+                ArrayList<BigDecimal> values = new ArrayList<>();
+                for (ArrayList<BigDecimal> r : matching) {
+                    values.add(r.get(colIdx));
                 }
 
-                if (func.equals("MAX")) {
-                    res = Collections.max(values);
-                }
-
-                if (func.equals("AVG")) {
-                    double sum = 0;
-                    for (double v : values){
-                        sum += v;
-                    }
-                    if (values.size() > 0){
-                        res = sum / values.size();
-                    }
-                    else {
-                        res = 0;
-                    }
-                }
-                newRow.add(res);
+                newRow.add(compute(func, values));
             }
+
             resultRows.add(newRow);
         }
-        Table result = new Table("GroupedAgg_" + original.getName(), resultCols, resultInd);
+
+        Table result = new Table("GroupedAgg " + original.getName(), resultCols, resultInd);
         result.rows = resultRows;
         return result;
     }
 
+    private BigDecimal compute(String func, ArrayList<BigDecimal> values) {
 
-    public ArrayList<ArrayList<Double>> applyWhere(Table foundTable, String leftColumn, boolean compareColumn, String rightColumn, Double rightNum) {
-        ArrayList<ArrayList<Double>> filteredRows = new ArrayList<>();
+        if (func.equals("COUNT")) {
+            return BigDecimal.valueOf(values.size());
+        }
+
+        if (func.equals("MAX")) {
+            return values.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+        }
+
+        if (func.equals("AVG")) {
+            if (values.isEmpty()) return BigDecimal.ZERO;
+            BigDecimal sum = BigDecimal.ZERO;
+            for (BigDecimal v : values) {
+                sum = sum.add(v);
+            }
+            return sum.divide(BigDecimal.valueOf(values.size()), 20, RoundingMode.HALF_UP);
+        }
+
+        return BigDecimal.ZERO;
+    }
+
+
+    public ArrayList<ArrayList<BigDecimal>> applyWhere(Table foundTable, String leftColumn, boolean compareColumn, String rightColumn, BigDecimal rightNum) {
+        ArrayList<ArrayList<BigDecimal>> filteredRows = new ArrayList<>();
         int leftIndx = -1;
         int rightIndx = -1;
 
@@ -479,10 +466,10 @@ public class Parser {
 
 
         for (int row = 0; row < foundTable.getRows().size(); row++) {
-            Double leftValue = foundTable.getRows().get(row).get(leftIndx);
+            BigDecimal leftValue = foundTable.getRows().get(row).get(leftIndx);
             if (compareColumn) {
-                Double rightValue = foundTable.getRows().get(row).get(rightIndx);
-                if (leftValue.equals(rightValue)) {
+                BigDecimal rightValue = foundTable.getRows().get(row).get(rightIndx);
+                if (leftValue.compareTo(rightValue) == 0) {
                     filteredRows.add(foundTable.getRows().get(row));
                 }
             }
@@ -512,25 +499,20 @@ public class Parser {
         ArrayList<Boolean> newInd = new ArrayList<>();
         for (int idx : groupIdx) newInd.add(foundTable.getIndexed().get(idx));
 
-        Table result = new Table("Grouped_" + foundTable.getName(), newCols, newInd);
+        Table result = new Table("Grouped " + foundTable.getName(), newCols, newInd);
 
-        ArrayList<ArrayList<Double>> grouped = new ArrayList<>();
+        ArrayList<ArrayList<BigDecimal>> grouped = new ArrayList<>();
 
-        for (ArrayList<Double> row : foundTable.getRows()) {
-            ArrayList<Double> key = new ArrayList<>();
-            for (int idx : groupIdx) key.add(row.get(idx));
-
-            boolean exists = false;
-            for (ArrayList<Double> g : grouped) {
-                if (g.equals(key)) {
-                    exists = true;
-                    break;
-                }
+        for (ArrayList<BigDecimal> row : foundTable.getRows()) {
+            ArrayList<BigDecimal> key = new ArrayList<>();
+            for (int idx : groupIdx) {
+                key.add(row.get(idx));
             }
-            if (!exists){
+            if (!grouped.contains(key)) {
                 grouped.add(key);
             }
         }
+
         result.rows = grouped;
         return result;
     }
